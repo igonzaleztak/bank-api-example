@@ -1,0 +1,49 @@
+version: "3"
+
+dotenv: ['.env']
+
+tasks:
+  mod:
+    desc: updates the go modules
+    cmds:
+      - go mod download
+
+  install-air:
+    desc: installs air dependencies
+    cmds:
+      - go install github.com/air-verse/air@latest
+
+  dev:
+    desc: starts go development mode. By executing this tasks, you will be able to start the API in development mode.
+    deps: [install-air, mod]
+    cmd: air
+  
+
+  test:
+    desc: runs the tests
+    deps:  [mod]
+    cmds:
+      - go test -skip TestIntegrationSuite  -v ./...
+
+  race:
+    desc: runs the tests with race mode to detect incorrect concurrent behavior
+    deps:  [mod]
+    cmds:
+      - go test -skip TestIntegrationSuite -race -v ./...
+
+  integration_test:
+    desc: runs the integration tests
+    deps:  [mod]
+    cmds:
+      - go test -tags=integration -v tests/integration_test.go
+
+  run:
+    desc: starts the API
+    deps:  [mod]
+    cmds:
+      - go run cmd/main.go
+
+  docker:
+    desc: start the docker-compose
+    cmds:
+      - docker compose up -d

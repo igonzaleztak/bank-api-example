@@ -1,0 +1,11 @@
+root = "."
+tmp_dir = "/tmp"
+
+[build]
+bin = "./tmp/main"
+cmd = "go build -tags=viper_bind_struct -o ./tmp/main cmd/main.go"
+delay = 1000
+exclude_dir = ["docs", "db"]
+exclude_regex = ["_test.go"]
+send_interrupt = true
+kill_delay = 500 # nanosecond
