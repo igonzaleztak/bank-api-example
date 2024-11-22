@@ -31,7 +31,7 @@ their transactions. The API must allow users to:
 
 This section describes how the project has been structured and the line of thought that I have followed to accomplish the definition of the API. 
 
-Below, it can be seen the project structure
+Below, it can be seen the project's structure
 
 ```md
 .
@@ -63,14 +63,14 @@ Below, it can be seen the project structure
 └── Taskfile.yaml
 ```
 
-The folder `cmd` contains the `main.go` that starts the API. If you take a look at this file, you will see that it only is used to call `Run()` function defined in the folder `bootstrap`. This function sets up the API. It is in charge of:
+The `cmd` folder contains the `main.go` file, which starts the API. If you look at this file, you'll see that its sole purpose is to call the `Run()` method defined in the bootstrap folder. This function is responsible for setting up the API. Specifically, it handles:
 
-- Setting up the application configuration.
-- Setting up the logger used to log the API
-- Start the In-Memory database
-- Start the HTTP server.
+- Configuring the application settings.
+- Initializing the logger used for API logging.
+- Starting the in-memory database.
+- Launching the HTTP server.
 
-To set up the application's configuration, it was decided that the most optimal approach would be to use environment variables. By using them, we ensure that users can easily modify the tool's settings. Additionally, if the API is deployed in Docker or Kubernetes, defining its configuration becomes very straightforward. The `.env` file shows the environmental variables that are read by the application.
+To configure the application, it was decided that the most optimal approach would be to use environment variables. This ensures that users can easily modify the tool's settings. Additionally, deploying the API in Docker or Kubernetes simplifies configuration management, as environment variables are easy to define in these platforms. The `.env` file contains the environment variables used by the application.
 
 ```bash
 PORT=3000 # Define the port in which the API will run
@@ -78,7 +78,7 @@ HEALTH_PORT=3001 # Define the port in which the health check will run
 LOG_LEVEL=debug # Define the log level of the API. It can be debug or info 
 ```
 
-As you can see in the env file, two ports are specified: one for the API to listen for requests, and another that will serve as the health check port. It has been decided to have the  health check on a separate port because it allows monitoring systems to independently verify the service's health without exposing the main API endpoints. This helps ensure that the application is operational while reducing the risk of overloading or exposing sensitive information from the primary API.
+As you can see in the `.env` file, two ports are specified: one for the API to handle requests and another for the health check. The decision to use a separate port for the health check allows monitoring systems to independently verify the service's health without accessing the main API endpoints. This approach ensures the application remains operational while minimizing the risk of overloading the primary API or exposing sensitive information.
 
 The folder `internal` contains all the logic of the API. Since no packages are going to be externalized, it makes sense to defined all the packages here. 
 
@@ -143,6 +143,17 @@ type DatabaseAdapter interface {
 }
 ```
 
+The previous interface is currently used only by an in-memory database. However, if additional databases are added in the future, they can be easily implemented by adhering to this interface.
+
+```go
+// NewDatabaseAdapter creates a new database adapter. In this case there is only one implementation: an in-memory database.
+// However, in the future we could add other implementations such as a SQL database. By modifying this function, we can easily
+// switch between different database implementations.
+func NewDatabaseAdapter(logger *zap.SugaredLogger) DatabaseAdapter {
+	return memory.NewInMemoryDatabase(logger)
+}
+```
+
 Additionally, this package contains the data models that will be stored in the database. Specifically, two entities have been defined: `Account` and `Transaction`
 
 ```go
@@ -163,17 +174,6 @@ type Transaction struct {
 }
 ```
 
-The previous interface is currently used only by an in-memory database. However, if additional databases are added in the future, they can be easily implemented by adhering to this interface.
-
-```go
-// NewDatabaseAdapter creates a new database adapter. In this case there is only one implementation: an in-memory database.
-// However, in the future we could add other implementations such as a SQL database. By modifying this function, we can easily
-// switch between different database implementations.
-func NewDatabaseAdapter(logger *zap.SugaredLogger) DatabaseAdapter {
-	return memory.NewInMemoryDatabase(logger)
-}
-```
-
 To store persistently information in the API, a simple in-memory database has been created. This database is composed by two maps: one to store accounts associated with ids and another one to store transactions associated by account ID.
 
 ```go
@@ -190,7 +190,7 @@ type inMemoryDatabase struct {
 }
 ```
 
-In the next piece of code it can be see how an account is stored in this database. In this case it can be seen the usage of locks to ensure that only one goroutine access the accounts map at a time. The type `sync.Map` could have also been used instead of using regular maps with locks.
+In the next piece of code it can be seen how an account is stored in memory. In this case, it can be seen the usage of locks to ensure that only one goroutine access the accounts map at a time. The type `sync.Map` could have also been used instead of using regular maps with locks.
 
 ```go
 // CreateAccount creates a new account in the database.
@@ -225,9 +225,9 @@ type TransactionService interface {
 }
 ```
 
-These services are in charge of recieving information from the transport layer, process it and read/write from the database.
+These services are in charge of recieving information from the transport layer, processing it, and interacting with the database.
 
-Finally, the last package within the internal folder is transport. This package defines the application's transport layer. Similar to the database package, it includes an interface representing this layer, allowing for future extensions with additional transport layers. Currently, only HTTP has been implemented.
+Finally, the last package in the `internal` folder is `transport`. This package defines the application's transport layer. Like the database package, it provides an interface to represent this layer, enabling future extensions with additional transport options. At present, only HTTP has been implemented.
 
 ```go
 // Transporter is an interface for the transport layer. It defines the Serve method that
@@ -244,7 +244,7 @@ func NewTransporter(logger *zap.SugaredLogger, db db.DatabaseAdapter) Transporte
 }
 ```
 
-The framework (`chi`)[https://github.com/go-chi/chi] has been used to implement the HTTP server. Additionally, to validate request's bodies the framework (`validator`)[https://github.com/go-playground/validator]. This framework allows users to set several rules in the struct tags that can be used to validate the requests. One example of its usage can be seen when a transaction is created. The following struct contains the tag `validate` indicating what needs to be validated. For example, in the case of the field `type` it validates that is in the body (`mandatory`) and it checks that its value is `deposit` or `withdrawal` (`oneof`).
+The framework (`chi`)[https://github.com/go-chi/chi] has been used to implement the HTTP server. Additionally, to validate request's bodies the framework (`validator`)[https://github.com/go-playground/validator]. This framework allows users to set multiple rules in the struct tags that can be used to validate the requests. One example of its usage can be seen when creating a transaction. The following struct contains the tag `validate`, which specifies the validation rules. For instance, the field `type` is validated to ensure it is present in the body (`mandatory`) and that its value is either `deposit` or `withdrawal` (`oneof`).
 
 ```go
 // CreateTransactionRequest is the request schema for the CreateTransaction endpoint.
