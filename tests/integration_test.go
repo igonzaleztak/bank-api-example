@@ -148,8 +148,6 @@ func (s *integrationSuite) TestCreateAccount() {
 			err = json.Unmarshal(responseJSON, &body)
 			s.Require().NoError(err)
 
-			helpers.PrettyPrintStruct(body)
-
 			s.Equal(tt.expectedStatusCode, resp.StatusCode)
 			s.Equal(tt.out.Code, body.Code)
 		}
